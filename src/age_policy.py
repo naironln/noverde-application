@@ -1,7 +1,6 @@
-from boto3.dynamodb.conditions import Key, Attr
 from dynamo_handler import OrdersPoliciesTable, CustomerTable
+from event_parser import EventOrdersPoliciesParser
 
-import boto3
 
 
 def parse_event(event):
@@ -19,6 +18,7 @@ def resolve_policies(order_policy_id, customer_id):
     is_complete, result, policies = table.check_all_policies(order_policy_id)
     print("RESOLVER", is_complete, result, policies)
     table = CustomerTable()
+
     if is_complete:
         table.update_customer_attr(attr="processing_status",
                                    customer_id=customer_id,
@@ -27,33 +27,29 @@ def resolve_policies(order_policy_id, customer_id):
                                    customer_id=customer_id,
                                    value=result)
 
-        if result == "refused":
-            refused_policy = policies.remove(True)
-            table.update_customer_attr(attr="refused_policy",
-                                    customer_id=customer_id,
-                                    value=refused_policy)
 
-def lambda_handler(event, context, customer_id=None):
-    print(event)
+def lambda_handler(event, context):
+    print("EVENTO CRU:",event)
     print(context)
+    events = event.get("Records")
 
-    items = event.get("Records", {})[0]
-    age =  items.get("dynamodb", {}).get("NewImage", {}).get("customer", {}).get("M", {}).get("age", {}).get("N", {})
-    
-    customer_id, order_policy_id = parse_event(event)
-    print(age)
-    age_validation = False if int(age) < 18 else True
+    for event in events:
+        print("EVENT NAME", event.get("eventName"))
+        if event.get("eventName") == "INSERT":
+            order_policy = EventOrdersPoliciesParser(event)
+            customer = order_policy.customer
 
-    table = OrdersPoliciesTable()
-    table.update_order_policy_attr(attr="age_policy", 
-                                   order_policy_id=order_policy_id, 
-                                   value=age_validation)
-    resolve_policies(order_policy_id, customer_id)
+            age = customer.age
+            
+            age_validation = False if int(age) < 18 else True
+
+            table = OrdersPoliciesTable()
+            table.update_order_policy_attr(attr="age_policy", 
+                                        order_policy_id=order_policy.order_policy_id, 
+                                        value=age_validation)
 
 
-
-
-    return(str(event))
+            resolve_policies(order_policy.order_policy_id, customer.customer_id)
     
 
 # if __name__ == "__main__":

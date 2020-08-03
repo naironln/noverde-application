@@ -40,9 +40,11 @@ class PayloadParser:
                 "terms": self.terms,
                 "income": str(self.income),
                 "timestamp": str(self.timestamp),
-                "status": "processing",
+                "processing_status": "processing",
                 "active": True,
-                "result": "NULL",
+                "processing_result": "NULL",
+                "refused_policies": [],
+
             }
 
         except Exception as e:
@@ -87,7 +89,7 @@ class PayloadParser:
             self.amount = Decimal(self.amount)
 
         except Exception as e:
-            error("amount must be a decimal value")
+            self.error("amount must be a decimal value")
 
     def validate_terms(self):
         try:
@@ -104,18 +106,5 @@ class PayloadParser:
             self.income = Decimal(self.income)
 
         except Exception as e:
-            error("income must be a decimal value")
+            self.error("income must be a decimal value")
 
-
-if __name__ == "__main__":
-
-    payload = {
-        "name": "Nairon",
-        "cpf": "431.166.898-81",
-        "birthdate": "29/04/1994",
-        "amount": "4000",
-        "terms": "9",
-        "income": "8000"
-    }
-    parser = PayloadParser(payload)
-    print(parser.parse())

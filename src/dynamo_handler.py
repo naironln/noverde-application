@@ -1,8 +1,9 @@
 from boto3.dynamodb.conditions import Key, Attr
 from datetime import datetime
-from boto3 import *
 import boto3
 import uuid
+import json
+
 
 class DynamoHandler:
     def __init__(self):
@@ -16,26 +17,31 @@ class CustomerTable(DynamoHandler):
 
 
     def get_approval(self, customer_id):
+        customer = self.get_customer(customer_id)
 
-        item = self.customer_table.get_item(Key={
+        processing_result = customer.get("processing_result")
+        return True if processing_result == "approved" else False
+    
+    
+    def get_customer(self, customer_id):
+
+        customer = self.customer_table.get_item(Key={
                     "customer_id": customer_id
                     }).get("Item", {})
 
-        processing_result = item.get("processing_result")
-        is_approved if processing_result == "approved"
-        
-        return True
+        return customer
 
     
     def update_customer_attr(self, attr, customer_id, value):
-        print("ATTR", attr, customer_id, value)
         response = self.customer_table.update_item(
             Key={
                 'customer_id': customer_id
             },
             UpdateExpression=f'SET {attr} = :attr',
+            ConditionExpression="customer_id = :customer_id",
             ExpressionAttributeValues={
-                ':attr': value
+                ':attr': value,
+                ':customer_id': customer_id
             }
         )
     
@@ -49,7 +55,6 @@ class CustomerTable(DynamoHandler):
             FilterExpression=Attr('cpf').eq(cpf)
         ).get('Items', [])
 
-        print('CPFFF',items)
         items = sorted(items, key=lambda k: k['timestamp']) 
 
         if items and customer.get('active'):
@@ -74,17 +79,36 @@ class OrdersPoliciesTable(DynamoHandler):
 
 
     def update_order_policy_attr(self, attr, order_policy_id, value):
+        # item = self.get_order_policy(order_policy_id)
+
         response = self.orders_policies_table.update_item(
             Key={
                 'order_policy_id': order_policy_id
             },
             UpdateExpression=f'SET {attr} = :attr',
+            ConditionExpression="order_policy_id = :order_policy_id",
             ExpressionAttributeValues={
-                ':attr': value
+                ':attr': value,
+                ':order_policy_id': order_policy_id
             }
         )
+        return response
 
-    
+    def get_order_policy_by_customer_id(self, customer_id):
+        order_policy = self.orders_policies_table.scan(
+            FilterExpression=Attr('customer_id').eq(customer_id)
+        ).get('Items', [])[-1]
+
+        return order_policy
+
+
+    def get_order_policy(self, order_policy_id):
+        response = self.orders_policies_table.get_item(Key={
+            "order_policy_id": order_policy_id
+            })                
+        return response.get("Item")
+
+
     def check_all_policies(self, order_policy_id):
         response = self.orders_policies_table.get_item(Key={
             "order_policy_id": order_policy_id
@@ -94,20 +118,18 @@ class OrdersPoliciesTable(DynamoHandler):
         commitment_policy = response.get("Item", {}).get("commitment_policy")
         policies = [age_policy, score_policy, commitment_policy]
 
-        print(policies)
 
-        is_complete = False if None in policies else True
-        result = "refused" if False in policies else "approved"
+        is_complete = False if "NULL" in policies else True
+        result = "refused" if False in policies or "NULL" in policies else "approved"
 
         return is_complete, result, policies
 
 
     def put_order_policy(self, customer):
 
-        # print(response)
-
+        order_policy_id = str(uuid.uuid1())
         order_policy = {
-            "order_policy_id": str(uuid.uuid1()),
+            "order_policy_id": order_policy_id,
             "customer_id": customer.get("customer_id"),
             "customer": customer,
             "age_policy": "NULL",
@@ -126,16 +148,29 @@ class ProposalTable(DynamoHandler):
         self.proposal_table = self.dynamodb.Table('Proposal')
 
 
-    def put_proposal(self, customer, fee, terms_value, amount):
+    def put_proposal(self, customer, fee, terms_value, amount, approved_terms):
         proposal = {
             "proposal_id": str(uuid.uuid1()),
             "customer_id": customer.get("customer_id"),
-            "customer": customer,
-            "fee": fee,
-            "terms_value": terms_value,
-            "amount": amount,
+            "customer": json.dumps(customer),
+            "fee": str(fee),
+            "terms_value": str(terms_value),
+            "approved_terms": approved_terms,
+            "amount": str(amount),
             "active": True,
             "timestamp": str(datetime.now().timestamp()),
         }   
 
-        return self.orders_policies_table.put_item(Item=order_policy)
+        return self.proposal_table.put_item(Item=proposal)
+
+    
+    def get_proposal_by_customer_id(self, customer_id):
+        proposal = self.proposal_table.scan(
+            FilterExpression=Attr('customer_id').eq(customer_id)
+        ).get("Items", {})
+        print(proposal)
+        if proposal:
+            return proposal[-1]
+        
+        return proposal
+
