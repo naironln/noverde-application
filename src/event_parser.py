@@ -1,6 +1,5 @@
 class EventOrdersPoliciesParser:
     def __init__(self, event):
-        print(event)
         record = event.get("dynamodb").get("NewImage")
         customer_event = record.get("customer").get("M")
         

@@ -9,13 +9,11 @@ import json
 
 
 def resolve_policies(order_policy_id, customer_id):
-    print("RESOLVER")
     table = OrdersPoliciesTable()
     is_complete, result, policies = table.check_all_policies(order_policy_id)
     table = CustomerTable()
 
     if is_complete:
-        print("IS COMPLETE")
         table.update_customer_attr(attr="processing_status",
                                    customer_id=customer_id,
                                    value="completed")
@@ -23,7 +21,6 @@ def resolve_policies(order_policy_id, customer_id):
                                    customer_id=customer_id,
                                    value=result)
 
-    print("END RESOLVER")
 
 
 def post_score_api(cpf):
@@ -60,24 +57,19 @@ def lambda_handler(event, context, customer_id=None):
 
 
             table = OrdersPoliciesTable()
-            print("FIRST UPDATE")
             table.update_order_policy_attr(attr="score_policy", 
                                             order_policy_id=order_policy.order_policy_id, 
                                             value=is_score_valid)
-            print("SECOND UPDATE")
             table.update_order_policy_attr(attr="score", 
                                             order_policy_id=order_policy.order_policy_id, 
                                             value=score)
 
             customer.score = score
             commitment_hander(order_policy, customer)
-            print("COMMITMENT COMPLETE")
             resolve_policies(order_policy.order_policy_id, customer.customer_id)
-            print("END DO END")
 
     return(event)
     
 
 if __name__ == "__main__":
-    print(post_score_api('12345678901'))
 

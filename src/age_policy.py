@@ -16,7 +16,7 @@ def parse_event(event):
 def resolve_policies(order_policy_id, customer_id):
     table = OrdersPoliciesTable()
     is_complete, result, policies = table.check_all_policies(order_policy_id)
-    print("RESOLVER", is_complete, result, policies)
+    
     table = CustomerTable()
 
     if is_complete:
@@ -29,12 +29,12 @@ def resolve_policies(order_policy_id, customer_id):
 
 
 def lambda_handler(event, context):
-    print("EVENTO CRU:",event)
-    print(context)
+    
+    
     events = event.get("Records")
 
     for event in events:
-        print("EVENT NAME", event.get("eventName"))
+        
         if event.get("eventName") == "INSERT":
             order_policy = EventOrdersPoliciesParser(event)
             customer = order_policy.customer

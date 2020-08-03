@@ -168,7 +168,6 @@ class ProposalTable(DynamoHandler):
         proposal = self.proposal_table.scan(
             FilterExpression=Attr('customer_id').eq(customer_id)
         ).get("Items", {})
-        print(proposal)
         if proposal:
             return proposal[-1]
         

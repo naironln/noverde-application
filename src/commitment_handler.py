@@ -18,21 +18,15 @@ def post_commitment_api(cpf):
 
     response = requests.request("POST", url, data=payload, headers=headers)
     result = json.loads(response.text)
-    print("RESULT", result)
     return result.get("commitment", 0)
 
 
 def calc_commitment(commitment, income, instalment_value):
     commitment_income = float(commitment) * float(income)
     remaining_income = float(income) - commitment_income
-    print("="*20)
-    print(commitment_income, remaining_income)
-    print(instalment_value, remaining_income)
-    print("="*20)
 
 
     valid = False if instalment_value > remaining_income else True
-    print(valid)
     return valid
 
 
@@ -40,11 +34,7 @@ def instalment_calc(terms, amount, fee):
     terms = int(terms)
     amount = float(amount)
     fee = fee / 100.0
-    print(terms, amount, fee)
 
-    print("PV", amount)
-    print("n", terms)
-    print("i", fee)
 
     divider = (((1 + fee)** terms) * fee)
     dividend = (((1 + fee)** terms) - fee)
@@ -72,7 +62,7 @@ def calc_terms(score, commitment, terms, income, amount):
         fee = fee_tb[score_option][term_option]
         instalment_value = instalment_calc(i, amount, fee)
         is_valid = calc_commitment(commitment, income, instalment_value)
-        print("RETURN")
+
         return is_valid, instalment_value, fee, i
 
 
@@ -82,7 +72,6 @@ def format_customer(customer):
     customer["timestamp"] = str(customer["timestamp"])
     customer["terms"] = str(customer["terms"])
     customer["age"] = str(customer["age"])
-    print("CUSTOMER",customer)
 
     return customer
 
@@ -101,8 +90,7 @@ def commitment_hander(event, customer):
                                                            commitment=commitment,
                                                            income=customer.income,
                                                            amount=customer.amount)
-        print("IN IF")
-    print("OUT IF")
+
 
     orders_policies_tb = OrdersPoliciesTable()
     orders_policies_tb.update_order_policy_attr(attr="commitment_policy",
@@ -115,7 +103,6 @@ def commitment_hander(event, customer):
                                                 order_policy_id=event.order_policy_id,
                                                 value=str(instalment_value))
     
-    print("END UPDATE ORDER POLICY")
     if commitment_validation:
         table = CustomerTable()
         customer = table.get_customer(customer.customer_id)
@@ -128,10 +115,8 @@ def commitment_hander(event, customer):
                                 amount=customer.get("amount"),
                                 approved_terms=approved_terms)
     
-    print("END COMMITMENT")
 
     return(str(event))
 
 
-# if __name__ == "__main__":
-#     print(post_score_api('12345678901'))
+# if __name__ == "__main__"
