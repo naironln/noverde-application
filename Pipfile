@@ -9,7 +9,7 @@ verify_ssl = true
 flask = "*"
 flask_restplus = "*"
 cached_property = "*"
-Werkzeug = "==0.16.1"
+Werkzeug = "==2.2.3"
 boto3 = "*"
 requests = "*"
 
